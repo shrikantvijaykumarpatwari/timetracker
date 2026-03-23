@@ -1,0 +1,488 @@
+​
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Attendance Tracker</title>
+<style>
+.ico{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+.ico svg{display:block}
+:root{
+  --bg:#f0f4f8;--surface:#fff;--surface2:#f7f9fc;--border:#e2e8f0;
+  --blue:#2563eb;--blue-l:#dbeafe;--blue-d:#1d4ed8;
+  --teal:#0d9488;--teal-l:#ccfbf1;
+  --amber:#d97706;--amber-l:#fef3c7;
+  --rose:#e11d48;--rose-l:#ffe4e6;
+  --violet:#7c3aed;--violet-l:#ede9fe;
+  --green:#16a34a;--green-l:#dcfce7;
+  --text:#0f172a;--text2:#475569;--text3:#94a3b8;
+  --r:14px;--rs:8px;
+  --sh:0 1px 3px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.04);
+  --shm:0 4px 24px rgba(0,0,0,.08)
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:48px}
+header{background:var(--blue);color:#fff;padding:16px 24px;display:flex;align-items:center;gap:12px;box-shadow:0 2px 12px rgba(37,99,235,.35)}
+header h1{font-size:17px;font-weight:700;letter-spacing:-.3px}
+.hdr-month{font-size:12px;opacity:.75;margin-left:auto;font-variant-numeric:tabular-nums}
+.wrap{max-width:1100px;margin:0 auto;padding:22px 16px;display:flex;flex-direction:column;gap:18px}
+.card{background:var(--surface);border-radius:var(--r);box-shadow:var(--sh);border:1px solid var(--border);overflow:hidden}
+.card-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:9px;font-size:13px;font-weight:700;color:var(--text2);background:var(--surface2);text-transform:uppercase;letter-spacing:.5px}
+.card-body{padding:18px}
+.dash-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}
+.dash-card{border-radius:var(--r);padding:15px;display:flex;flex-direction:column;gap:5px;border:1px solid transparent;transition:transform .15s,box-shadow .15s;cursor:default}
+.dash-card:hover{transform:translateY(-2px);box-shadow:var(--shm)}
+.dc-icon{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;margin-bottom:6px}
+.dc-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;opacity:.6}
+.dc-value{font-size:24px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1}
+.dc-sub{font-size:11px;opacity:.5;margin-top:1px}
+.dc-date{background:var(--blue-l);color:var(--blue-d);border-color:#bfdbfe}
+.dc-wdays{background:var(--violet-l);color:var(--violet);border-color:#ddd6fe}
+.dc-target{background:var(--teal-l);color:var(--teal);border-color:#99f6e4}
+.dc-hol{background:var(--amber-l);color:var(--amber);border-color:#fde68a}
+.dc-pl{background:var(--rose-l);color:var(--rose);border-color:#fecdd3}
+.dc-rem{background:var(--green-l);color:var(--green);border-color:#bbf7d0}
+.dc-rem.neg{background:#fee2e2;color:#dc2626;border-color:#fca5a5}
+.leave-row{display:flex;gap:14px}
+.leave-row .field{flex:1}
+.form-grid{display:grid;grid-template-columns:1fr 2fr;gap:12px;align-items:start}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.field{display:flex;flex-direction:column;gap:5px}
+.field label{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;display:flex;align-items:center;gap:5px}
+.field input{height:42px;border:1.5px solid var(--border);border-radius:var(--rs);padding:0 12px;font-family:inherit;font-size:14px;color:var(--text);background:var(--surface);transition:border-color .15s,box-shadow .15s;outline:none;width:100%}
+.field input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.12)}
+.btn-row{display:flex;flex-wrap:wrap;gap:9px;margin-top:14px}
+.btn{display:inline-flex;align-items:center;gap:7px;height:40px;padding:0 16px;border:none;border-radius:var(--rs);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap}
+.btn:active{transform:scale(.97)}
+.btn-blue{background:var(--blue);color:#fff}.btn-blue:hover{background:var(--blue-d)}
+.btn-teal{background:var(--teal);color:#fff}.btn-teal:hover{background:#0f766e}
+.btn-amber{background:var(--amber);color:#fff}.btn-amber:hover{background:#b45309}
+.btn-ghost{background:var(--surface2);color:var(--text2);border:1.5px solid var(--border)}.btn-ghost:hover{background:var(--border)}
+.btn-red{background:var(--rose);color:#fff}.btn-red:hover{background:#be123c}
+.btn-green{background:var(--green);color:#fff}.btn-green:hover{background:#15803d}
+.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:600px}
+thead tr{background:var(--surface2);border-bottom:2px solid var(--border)}
+thead th{padding:10px 13px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text2);white-space:nowrap}
+tbody tr{border-bottom:1px solid var(--border);transition:background .1s}
+tbody tr:hover{background:#f8fafc}
+tbody tr.selected{background:var(--blue-l)}
+tbody td{padding:10px 13px;vertical-align:middle}
+.td-mono{font-variant-numeric:tabular-nums;font-size:13px}
+.td-time{color:var(--teal);font-weight:500}
+.td-hrs{color:var(--blue);font-weight:700}
+.btn-edit{width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;border-radius:6px;border:none;cursor:pointer;background:var(--blue-l);color:var(--blue);transition:all .15s}
+.btn-edit:hover{background:var(--blue);color:#fff}
+.table-toolbar{display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:0 0 14px}
+.table-toolbar .spacer{flex:1}
+.row-count{font-size:12px;color:var(--text3);font-variant-numeric:tabular-nums}
+input[type=checkbox]{width:15px;height:15px;accent-color:var(--blue);cursor:pointer}
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:#1e293b;color:#fff;padding:10px 20px;border-radius:30px;font-size:13px;font-weight:500;box-shadow:0 4px 20px rgba(0,0,0,.25);transition:transform .3s cubic-bezier(.34,1.56,.64,1),opacity .3s;opacity:0;z-index:9999;pointer-events:none;white-space:nowrap}
+#toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+.empty{text-align:center;padding:40px 20px;color:var(--text3)}
+.empty svg{width:40px;height:40px;margin:0 auto 10px;display:block;opacity:.35}
+.empty p{font-size:14px}
+/* Live Timer Banner */
+.timer-banner{display:none;align-items:center;gap:14px;background:linear-gradient(135deg,#0d9488,#0891b2);color:#fff;border-radius:var(--r);padding:16px 22px;box-shadow:0 4px 20px rgba(13,148,136,.3);animation:slideIn .35s cubic-bezier(.34,1.56,.64,1)}
+.timer-banner.active{display:flex}
+@keyframes slideIn{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
+.timer-icon{width:46px;height:46px;border-radius:50%;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.timer-info{flex:1}
+.timer-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;opacity:.8;margin-bottom:3px}
+.timer-display{font-size:32px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:2px;line-height:1;font-family:'Courier New',monospace}
+.timer-since{font-size:12px;opacity:.7;margin-top:3px}
+.timer-pulse{width:10px;height:10px;border-radius:50%;background:#4ade80;box-shadow:0 0 0 0 rgba(74,222,128,.6);animation:pulse 1.8s infinite;flex-shrink:0}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(74,222,128,.6)}70%{box-shadow:0 0 0 10px rgba(74,222,128,0)}100%{box-shadow:0 0 0 0 rgba(74,222,128,0)}}
+@media(max-width:768px){
+  .dash-grid{grid-template-columns:repeat(2,1fr)}
+  .form-grid{grid-template-columns:1fr}
+  .btn{flex:1 1 calc(50% - 5px);justify-content:center}
+  .table-toolbar{flex-direction:column;align-items:stretch}
+  .table-toolbar .btn{width:100%;justify-content:center}
+}
+@media(max-width:420px){
+  .dc-value{font-size:20px!important}
+  header h1{font-size:14px}
+}
+</style>
+</head>
+<body>
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <symbol id="i-calcheck" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><polyline points="9 16 11 18 15 14"/></symbol>
+  <symbol id="i-gauge" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12A10 10 0 1 1 12 2"/><path d="M22 12a10 10 0 0 1-4.15 8.09"/><line x1="12" y1="12" x2="18" y2="6"/><circle cx="12" cy="12" r="2" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-calday" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><rect x="9" y="14" width="2" height="2" fill="currentColor" stroke="none" rx="0.5"/></symbol>
+  <symbol id="i-brief" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="12.01"/><path d="M2 12h20"/></symbol>
+  <symbol id="i-target" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="2" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></symbol>
+  <symbol id="i-clip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></symbol>
+  <symbol id="i-hourglass" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.17a2 2 0 0 0-.586-1.414L12 12l-4.414 4.416A2 2 0 0 0 7 17.83V22"/><path d="M7 2v4.17a2 2 0 0 0 .586 1.414L12 12l4.414-4.416A2 2 0 0 0 17 6.17V2"/></symbol>
+  <symbol id="i-plane" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21 4 19.5 2.5S18 2 16.5 3.5L13 7 4.8 5.2l-1.2 1.2 6.2 3.4L7 14H4l-1 1 4 2 2 4 1-1v-3l3.8-2.8 3.4 6.2 1.2-1.2z"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></symbol>
+  <symbol id="i-login" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></symbol>
+  <symbol id="i-logout" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-stop" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><rect x="9" y="9" width="6" height="6" rx="1" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-save" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></symbol>
+  <symbol id="i-reset" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-5.51"/></symbol>
+  <symbol id="i-table" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="9" x2="9" y2="21"/><line x1="15" y1="9" x2="15" y2="21"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></symbol>
+  <symbol id="i-export" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></symbol>
+  <symbol id="i-import" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></symbol>
+  <symbol id="i-pen" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></symbol>
+  <symbol id="i-calx" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="10" y1="14" x2="14" y2="18"/><line x1="14" y1="14" x2="10" y2="18"/></symbol>
+</svg>
+
+<header>
+  <span class="ico" style="color:#fff"><svg width="22" height="22"><use href="#i-calcheck"/></svg></span>
+  <h1>Office Attendance Tracker</h1>
+  <span class="hdr-month" id="hdr-month"></span>
+</header>
+
+<div class="wrap">
+
+  <!-- Dashboard -->
+  <div class="card">
+    <div class="card-header">
+      <span class="ico" style="color:var(--blue)"><svg width="15" height="15"><use href="#i-gauge"/></svg></span>
+      Dashboard
+    </div>
+    <div class="card-body">
+      <div class="dash-grid">
+        <div class="dash-card dc-date">
+          <div class="dc-icon" style="background:rgba(37,99,235,.15);color:var(--blue-d)"><svg width="17" height="17"><use href="#i-calday"/></svg></div>
+          <div class="dc-label">Today</div>
+          <div class="dc-value" id="d-today" style="font-size:14px;line-height:1.5"></div>
+        </div>
+        <div class="dash-card dc-wdays">
+          <div class="dc-icon" style="background:rgba(124,58,237,.15);color:var(--violet)"><svg width="17" height="17"><use href="#i-brief"/></svg></div>
+          <div class="dc-label">Working Days</div>
+          <div class="dc-value" id="d-wdays">—</div>
+          <div class="dc-sub">Mon – Fri</div>
+        </div>
+        <div class="dash-card dc-target">
+          <div class="dc-icon" style="background:rgba(13,148,136,.15);color:var(--teal)"><svg width="17" height="17"><use href="#i-target"/></svg></div>
+          <div class="dc-label">Target Hours</div>
+          <div class="dc-value" id="d-target">—</div>
+          <div class="dc-sub">hrs this month</div>
+        </div>
+        <div class="dash-card dc-hol">
+          <div class="dc-icon" style="background:rgba(217,119,6,.15);color:var(--amber)"><svg width="17" height="17"><use href="#i-sun"/></svg></div>
+          <div class="dc-label">Holiday Hours</div>
+          <div class="dc-value" id="d-holiday">0</div>
+          <div class="dc-sub">hrs</div>
+        </div>
+        <div class="dash-card dc-pl">
+          <div class="dc-icon" style="background:rgba(225,29,72,.15);color:var(--rose)"><svg width="17" height="17"><use href="#i-clip"/></svg></div>
+          <div class="dc-label">PL Hours</div>
+          <div class="dc-value" id="d-pl">0</div>
+          <div class="dc-sub">hrs</div>
+        </div>
+        <div class="dash-card dc-rem" id="d-rem-card">
+          <div class="dc-icon" style="background:rgba(22,163,74,.15);color:var(--green)"><svg width="17" height="17"><use href="#i-hourglass"/></svg></div>
+          <div class="dc-label">Remaining</div>
+          <div class="dc-value" id="d-remain">—</div>
+          <div class="dc-sub">hrs left</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Live Timer Banner -->
+  <div class="timer-banner" id="timer-banner">
+    <div class="timer-icon">
+      <svg width="22" height="22"><use href="#i-clock"/></svg>
+    </div>
+    <div class="timer-info">
+      <div class="timer-label">⏱ Time in Office Today</div>
+      <div class="timer-display" id="timer-display">00:00:00</div>
+      <div class="timer-since" id="timer-since">Checked in at —</div>
+    </div>
+    <div class="timer-pulse"></div>
+  </div>
+
+  <!-- Leave -->
+  <div class="card">
+    <div class="card-header">
+      <span class="ico" style="color:var(--blue)"><svg width="15" height="15"><use href="#i-plane"/></svg></span>
+      Leave Hours
+    </div>
+    <div class="card-body">
+      <div class="leave-row">
+        <div class="field">
+          <label><span class="ico"><svg width="13" height="13"><use href="#i-sun"/></svg></span> Holiday Hours</label>
+          <input type="number" id="inp-holiday" min="0" step="0.5" placeholder="0">
+        </div>
+        <div class="field">
+          <label><span class="ico"><svg width="13" height="13"><use href="#i-clip"/></svg></span> PL Hours (Paid Leave)</label>
+          <input type="number" id="inp-pl" min="0" step="0.5" placeholder="0">
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-blue" onclick="saveLeave()">
+          <span class="ico"><svg width="14" height="14"><use href="#i-save"/></svg></span> Save Leave Hours
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Log Attendance -->
+  <div class="card">
+    <div class="card-header">
+      <span class="ico" style="color:var(--blue)"><svg width="15" height="15"><use href="#i-clock"/></svg></span>
+      Log Attendance
+    </div>
+    <div class="card-body">
+      <div class="form-grid">
+        <div class="field">
+          <label><span class="ico"><svg width="13" height="13"><use href="#i-cal"/></svg></span> Date</label>
+          <input type="date" id="inp-date">
+        </div>
+        <div class="form-row">
+          <div class="field">
+            <label><span class="ico"><svg width="13" height="13"><use href="#i-login"/></svg></span> Check In</label>
+            <input type="time" id="inp-checkin">
+          </div>
+          <div class="field">
+            <label><span class="ico"><svg width="13" height="13"><use href="#i-logout"/></svg></span> Check Out</label>
+            <input type="time" id="inp-checkout">
+          </div>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-teal"  onclick="autoCheckIn()"><span class="ico"><svg width="15" height="15"><use href="#i-play"/></svg></span> Auto Check-In</button>
+        <button class="btn btn-amber" onclick="autoCheckOut()"><span class="ico"><svg width="15" height="15"><use href="#i-stop"/></svg></span> Auto Check-Out</button>
+        <button class="btn btn-blue"  onclick="saveEntry()"><span class="ico"><svg width="14" height="14"><use href="#i-save"/></svg></span> Save</button>
+        <button class="btn btn-ghost" onclick="resetForm()"><span class="ico"><svg width="14" height="14"><use href="#i-reset"/></svg></span> Reset</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="card">
+    <div class="card-header">
+      <span class="ico" style="color:var(--blue)"><svg width="15" height="15"><use href="#i-table"/></svg></span>
+      Attendance Log
+    </div>
+    <div class="card-body">
+      <div class="table-toolbar">
+        <button class="btn btn-red" onclick="deleteSelected()"><span class="ico"><svg width="14" height="14"><use href="#i-trash"/></svg></span> Delete Selected</button>
+        <span class="spacer"></span>
+        <button class="btn btn-green" onclick="exportCSV()"><span class="ico"><svg width="14" height="14"><use href="#i-export"/></svg></span> Export CSV</button>
+        <button class="btn btn-ghost" onclick="document.getElementById('csv-import').click()"><span class="ico"><svg width="14" height="14"><use href="#i-import"/></svg></span> Import CSV</button>
+        <input type="file" id="csv-import" accept=".csv" style="display:none" onchange="importCSV(event)">
+        <span class="row-count" id="row-count">0 records</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th><input type="checkbox" id="chk-all" onchange="toggleAll(this)"></th>
+              <th>Date</th><th>Check In</th><th>Check Out</th><th>Hours</th><th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="log-body"></tbody>
+        </table>
+        <div id="empty-state" class="empty" style="display:none">
+          <svg><use href="#i-calx"/></svg>
+          <p>No attendance records yet. Add your first entry above.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const $=id=>document.getElementById(id);
+const pad=n=>String(n).padStart(2,'0');
+function today(){const d=new Date();return`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`}
+function nowTime(){const d=new Date();return`${pad(d.getHours())}:${pad(d.getMinutes())}`}
+function fmtDate(s){if(!s)return'';const[y,m,d]=s.split('-');return`${d}/${m}/${y}`}
+function diffHours(ci,co){
+  if(!ci||!co)return 0;
+  const[h1,m1]=ci.split(':').map(Number),[h2,m2]=co.split(':').map(Number);
+  const diff=(h2*60+m2)-(h1*60+m1);return diff>0?Math.round(diff/60*100)/100:0;
+}
+function toast(msg,ms=2600){
+  const t=$('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),ms);
+}
+const getLog=()=>JSON.parse(localStorage.getItem('att_log')||'[]');
+const saveLog=d=>localStorage.setItem('att_log',JSON.stringify(d));
+const getLeave=()=>JSON.parse(localStorage.getItem('att_leave')||'{"holiday":0,"pl":0}');
+const saveLeaveStore=d=>localStorage.setItem('att_leave',JSON.stringify(d));
+
+// ── Live Timer ───────────────────────────────────────────────
+let timerInterval=null;
+
+function startTimer(checkInTime){
+  if(timerInterval){clearInterval(timerInterval);timerInterval=null;}
+  const[h,m]=checkInTime.split(':').map(Number);
+  const base=new Date();base.setHours(h,m,0,0);
+  $('timer-since').textContent='Checked in at '+checkInTime;
+  $('timer-banner').classList.add('active');
+  function tick(){
+    const diff=new Date()-base;
+    if(diff<0){$('timer-display').textContent='00:00:00';return;}
+    const th=Math.floor(diff/3600000),tm=Math.floor((diff%3600000)/60000),ts=Math.floor((diff%60000)/1000);
+    $('timer-display').textContent=`${pad(th)}:${pad(tm)}:${pad(ts)}`;
+  }
+  tick();timerInterval=setInterval(tick,1000);
+  localStorage.setItem('att_timer_ci',checkInTime);
+  localStorage.setItem('att_timer_date',today());
+}
+
+function stopTimer(){
+  if(timerInterval){clearInterval(timerInterval);timerInterval=null;}
+  $('timer-banner').classList.remove('active');
+  localStorage.removeItem('att_timer_ci');
+  localStorage.removeItem('att_timer_date');
+}
+
+// ── Core Logic ───────────────────────────────────────────────
+function workingDays(yr,mo){
+  let n=0,d=new Date(yr,mo-1,1);
+  while(d.getMonth()===mo-1){const w=d.getDay();if(w&&w!==6)n++;d.setDate(d.getDate()+1)}return n;
+}
+function refreshDash(){
+  const now=new Date(),yr=now.getFullYear(),mo=now.getMonth()+1;
+  const wd=workingDays(yr,mo),target=Math.round(wd/5*18*100)/100;
+  const lv=getLeave(),worked=getLog().reduce((s,r)=>s+(Number(r.hours)||0),0);
+  const rem=Math.round((target-lv.holiday-lv.pl-worked)*100)/100;
+  $('hdr-month').textContent=now.toLocaleDateString('en-GB',{month:'long',year:'numeric'});
+  $('d-today').textContent=now.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+  $('d-wdays').textContent=wd;$('d-target').textContent=target;
+  $('d-holiday').textContent=lv.holiday;$('d-pl').textContent=lv.pl;$('d-remain').textContent=rem;
+  $('d-rem-card').classList.toggle('neg',rem<0);
+}
+function loadLeave(){const l=getLeave();$('inp-holiday').value=l.holiday;$('inp-pl').value=l.pl}
+function saveLeave(){
+  const h=parseFloat($('inp-holiday').value)||0,p=parseFloat($('inp-pl').value)||0;
+  saveLeaveStore({holiday:h,pl:p});refreshDash();toast('✓ Leave hours saved');
+}
+function resetForm(){$('inp-date').value=today();$('inp-checkin').value='';$('inp-checkout').value=''}
+
+function autoCheckIn(){
+  const t=nowTime();
+  $('inp-date').value=today();
+  $('inp-checkin').value=t;
+  $('inp-checkout').value='';
+  _saveLog(today(),t,'');
+  startTimer(t);
+  toast('✓ Checked in at '+t+' — timer started');
+}
+
+function autoCheckOut(){
+  const t=nowTime();
+  $('inp-checkout').value=t;
+  const ci=$('inp-checkin').value,date=$('inp-date').value||today();
+  _saveLog(date,ci,t);
+  stopTimer();
+  toast('✓ Checked out at '+t);
+}
+
+function _saveLog(date,ci,co){
+  if(!date)return;
+  const hours=diffHours(ci,co),log=getLog(),idx=log.findIndex(r=>r.date===date);
+  if(idx>=0)log[idx]={date,checkin:ci,checkout:co,hours};
+  else log.push({date,checkin:ci,checkout:co,hours});
+  log.sort((a,b)=>b.date.localeCompare(a.date));saveLog(log);renderTable();refreshDash();
+}
+
+function saveEntry(silent=false){
+  const date=$('inp-date').value,ci=$('inp-checkin').value,co=$('inp-checkout').value;
+  if(!date){toast('⚠ Please select a date');return;}
+  _saveLog(date,ci,co);
+  if(!silent){
+    const isUpdate=getLog().findIndex(r=>r.date===date)>=0;
+    toast('✓ '+(isUpdate?'Row updated':'Entry saved')+' for '+fmtDate(date));
+  }
+  // Timer: only for today's manual entry
+  if(date===today()){
+    if(ci&&!co) startTimer(ci);
+    else if(ci&&co) stopTimer();
+  }
+}
+
+function editRow(date){
+  const row=getLog().find(r=>r.date===date);if(!row)return;
+  $('inp-date').value=row.date;$('inp-checkin').value=row.checkin;$('inp-checkout').value=row.checkout;
+  window.scrollTo({top:0,behavior:'smooth'});toast('✎ Editing '+fmtDate(date));
+}
+function deleteSelected(){
+  const sel=[...document.querySelectorAll('.row-chk:checked')].map(c=>c.dataset.date);
+  if(!sel.length){toast('⚠ Select rows to delete');return}
+  if(!confirm(`Delete ${sel.length} row(s)?`))return;
+  saveLog(getLog().filter(r=>!sel.includes(r.date)));renderTable();refreshDash();toast(`🗑 Deleted ${sel.length} row(s)`);
+}
+function toggleAll(el){
+  document.querySelectorAll('.row-chk').forEach(c=>c.checked=el.checked);
+  document.querySelectorAll('#log-body tr').forEach(tr=>tr.classList.toggle('selected',el.checked));
+}
+function renderTable(){
+  const log=getLog(),tbody=$('log-body'),empty=$('empty-state');
+  $('row-count').textContent=log.length+' record'+(log.length!==1?'s':'');
+  if(!log.length){tbody.innerHTML='';empty.style.display='';return}
+  empty.style.display='none';
+  tbody.innerHTML=log.map(r=>`
+    <tr>
+      <td><input type="checkbox" class="row-chk" data-date="${r.date}" onchange="this.closest('tr').classList.toggle('selected',this.checked)"></td>
+      <td class="td-mono">${fmtDate(r.date)}</td>
+      <td class="td-mono td-time">${r.checkin||'—'}</td>
+      <td class="td-mono td-time">${r.checkout||'—'}</td>
+      <td class="td-mono td-hrs">${r.hours?r.hours+'h':'—'}</td>
+      <td><button class="btn-edit" onclick="editRow('${r.date}')" title="Edit row"><svg width="13" height="13"><use href="#i-pen"/></svg></button></td>
+    </tr>`).join('');
+  $('chk-all').checked=false;
+}
+function exportCSV(){
+  const log=getLog();if(!log.length){toast('⚠ Nothing to export');return}
+  const rows=['Date,CheckIn,CheckOut,Hours',...log.map(r=>`${r.date},${r.checkin||''},${r.checkout||''},${r.hours||0}`)];
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([rows.join('\n')],{type:'text/csv'}));
+  a.download=`attendance_${today()}.csv`;a.click();toast('✓ CSV exported');
+}
+function importCSV(e){
+  const file=e.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    const lines=ev.target.result.trim().split('\n');
+    if(!lines[0].toLowerCase().includes('date')){toast('⚠ Invalid CSV');return}
+    const imp=lines.slice(1).map(l=>{
+      const[date,checkin,checkout,hours]=l.split(',');
+      return{date:(date||'').trim(),checkin:(checkin||'').trim(),checkout:(checkout||'').trim(),hours:parseFloat(hours)||0};
+    }).filter(r=>r.date);
+    let log=getLog();imp.forEach(i=>{const x=log.findIndex(r=>r.date===i.date);x>=0?log[x]=i:log.push(i)});
+    log.sort((a,b)=>b.date.localeCompare(a.date));saveLog(log);renderTable();refreshDash();
+    toast(`✓ Imported ${imp.length} rows`);e.target.value='';
+  };reader.readAsText(file);
+}
+
+// ── Also listen to manual checkin field change ───────────────
+$('inp-checkin').addEventListener('change',function(){
+  const date=$('inp-date').value||today(),ci=this.value,co=$('inp-checkout').value;
+  if(date===today()&&ci&&!co) startTimer(ci);
+});
+
+// ── Restore timer on page load ───────────────────────────────
+(function(){
+  const savedDate=localStorage.getItem('att_timer_date');
+  const savedCI=localStorage.getItem('att_timer_ci');
+  if(savedDate===today()&&savedCI){
+    const todayRow=getLog().find(r=>r.date===today());
+    if(!todayRow||!todayRow.checkout) startTimer(savedCI);
+  }
+})();
+
+$('inp-date').value=today();loadLeave();renderTable();refreshDash();
+['inp-holiday','inp-pl'].forEach(id=>{
+  $(id).addEventListener('input',()=>{
+    saveLeaveStore({holiday:parseFloat($('inp-holiday').value)||0,pl:parseFloat($('inp-pl').value)||0});
+    refreshDash();
+  });
+});
+</script>
+</body>
+</html>
