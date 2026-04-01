@@ -349,6 +349,38 @@ body {
   color: var(--danger);
 }
 
+/* ===== Clickable Deduction Cards ===== */
+#d-pl,
+#q-deduction,
+#y-deduction,
+#m-deduction {
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+#d-pl:hover,
+#q-deduction:hover,
+#y-deduction:hover,
+#m-deduction:hover {
+  color: var(--primary);
+  text-decoration: underline;
+}
+
+/* Make deduction summary cards clickable */
+#q-deduction-card,
+#y-deduction-card,
+#m-deduction-card {
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+#q-deduction-card:hover,
+#y-deduction-card:hover,
+#m-deduction-card:hover {
+  border-color: var(--primary-light);
+  box-shadow: var(--shadow-md);
+}
+
 /* ===== Quarter View ===== */
 .quarter-selector {
   display: flex;
@@ -553,6 +585,45 @@ body {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+}
+
+.month-selector {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.btn-month {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: var(--transition);
+  color: var(--text-secondary);
+}
+
+.btn-month:hover {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+.btn-month svg {
+  width: 16px;
+  height: 16px;
+}
+
+.month-label {
+  font-weight: 600;
+  font-size: 0.9375rem;
+  color: var(--text-primary);
+  min-width: 120px;
+  text-align: center;
 }
 
 .btn-year {
@@ -811,11 +882,59 @@ body {
 }
 
 /* ===== Leave Section ===== */
-.leave-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1.5rem;
+.leave-content {
   padding: 1.5rem;
+}
+
+.leave-form {
+  margin-bottom: 1.5rem;
+}
+
+.leave-count {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: var(--bg-tertiary);
+  padding: 0.25rem 0.75rem;
+  border-radius: var(--radius-lg);
+}
+
+.leave-type {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  background: var(--primary-light);
+  color: var(--primary);
+  border-radius: var(--radius-lg);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* ===== Holiday Section ===== */
+.holiday-content {
+  padding: 1.5rem;
+}
+
+.holiday-form {
+  margin-bottom: 1.5rem;
+}
+
+.holiday-count {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: var(--bg-tertiary);
+  padding: 0.25rem 0.75rem;
+  border-radius: var(--radius-lg);
+}
+
+.holiday-type {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  background: var(--success-light);
+  color: var(--success);
+  border-radius: var(--radius-lg);
+  font-size: 0.75rem;
+  font-weight: 600;
 }
 
 /* ===== Form Styles ===== */
@@ -1178,6 +1297,156 @@ tbody tr:last-child td {
   font-weight: 500;
 }
 
+/* ===== Deduction Modal ===== */
+.deduction-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.deduction-modal-content {
+  background: var(--bg-secondary);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xl);
+  max-width: 500px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  animation: slideIn 0.3s ease-out;
+}
+
+.deduction-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-tertiary);
+}
+
+.deduction-modal-header h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.deduction-modal-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: var(--transition);
+  color: var(--text-secondary);
+}
+
+.deduction-modal-close:hover {
+  background: var(--danger-light);
+  color: var(--danger);
+}
+
+.deduction-modal-close svg {
+  width: 18px;
+  height: 18px;
+}
+
+.deduction-modal-body {
+  padding: 1.5rem;
+}
+
+.deduction-section {
+  margin-bottom: 1.5rem;
+}
+
+.deduction-section:last-child {
+  margin-bottom: 0;
+}
+
+.deduction-section h4 {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.deduction-formula {
+  background: var(--bg-tertiary);
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius);
+  margin-bottom: 0.5rem;
+  font-family: 'Courier New', monospace;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.deduction-calculation {
+  background: var(--primary-light);
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius);
+  font-family: 'Courier New', monospace;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.deduction-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.deduction-list li {
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border-light);
+  font-size: 0.875rem;
+  color: var(--text-primary);
+}
+
+.deduction-list li:last-child {
+  border-bottom: none;
+}
+
+.deduction-empty {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.deduction-summary {
+  background: var(--bg-tertiary);
+  padding: 1rem;
+  border-radius: var(--radius);
+  margin-top: 1rem;
+}
+
+.deduction-summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.deduction-total {
+  color: var(--danger);
+  font-size: 1.125rem;
+}
+
 /* ===== Animations ===== */
 @keyframes fadeIn {
   from {
@@ -1264,8 +1533,8 @@ tbody tr:last-child td {
     font-size: 1.25rem;
   }
 
-  .leave-grid {
-    grid-template-columns: 1fr;
+  .leave-content,
+  .holiday-content {
     padding: 1rem;
   }
 
@@ -1306,7 +1575,8 @@ tbody tr:last-child td {
   }
 
   .quarter-selector,
-  .year-selector {
+  .year-selector,
+  .month-selector {
     width: 100%;
     justify-content: space-between;
   }
@@ -1318,6 +1588,11 @@ tbody tr:last-child td {
   .data-action {
     flex-direction: column;
     text-align: center;
+  }
+  
+  .deduction-modal-content {
+    width: 95%;
+    margin: 1rem;
   }
 }
 
@@ -1431,9 +1706,8 @@ tbody tr:last-child td {
     font-size: 0.75rem;
   }
 
-  .leave-grid {
-    grid-template-columns: 1fr;
-    gap: 0.75rem;
+  .leave-content,
+  .holiday-content {
     padding: 0.75rem;
   }
 
@@ -1611,7 +1885,9 @@ tbody tr:last-child td {
     font-size: 0.8rem;
   }
 
-  .log-count {
+  .log-count,
+  .leave-count,
+  .holiday-count {
     font-size: 0.7rem;
     padding: 0.2rem 0.5rem;
   }

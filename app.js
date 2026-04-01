@@ -1,6 +1,7 @@
 const $ = id => document.getElementById(id);
 
-const HOLIDAYS_2026 = [
+// Default holidays for 2026 (can be customized)
+const DEFAULT_HOLIDAYS_2026 = [
   "2026-01-01","2026-01-26","2026-03-03","2026-03-19",
   "2026-05-01","2026-09-14","2026-10-02","2026-10-20",
   "2026-11-09","2026-11-10","2026-12-25"
@@ -9,11 +10,30 @@ const HOLIDAYS_2026 = [
 // ---------- STATE ----------
 let currentYear = new Date().getFullYear();
 let currentQuarter = Math.ceil((new Date().getMonth() + 1) / 3);
+let currentMonth = new Date().getMonth() + 1; // Track current month for monthly view
 let editingDate = null; // Track which date is being edited
 
 // ---------- STORAGE ----------
 const getLog = () => JSON.parse(localStorage.getItem('log') || '[]');
 const saveLog = d => localStorage.setItem('log', JSON.stringify(d));
+
+// Leave storage
+const getLeaves = () => JSON.parse(localStorage.getItem('leaves') || '[]');
+const saveLeaves = d => localStorage.setItem('leaves', JSON.stringify(d));
+
+// Holiday storage (per year)
+const getHolidays = (year) => {
+  const stored = localStorage.getItem('holidays_' + year);
+  if (stored) {
+    return JSON.parse(stored);
+  }
+  // Return default holidays for 2026 if no custom holidays set
+  if (year === 2026) {
+    return DEFAULT_HOLIDAYS_2026;
+  }
+  return [];
+};
+const saveHolidays = (year, holidays) => localStorage.setItem('holidays_' + year, JSON.stringify(holidays));
 
 // ---------- HELPERS ----------
 const pad = n => String(n).padStart(2,'0');
@@ -29,7 +49,16 @@ function getWorkingDays(y,m){
 }
 
 function getHolidayCount(y,m){
-  return HOLIDAYS_2026.filter(d=>{
+  const holidays = getHolidays(y);
+  return holidays.filter(d=>{
+    let dt=new Date(d);
+    return dt.getFullYear()==y && dt.getMonth()+1==m;
+  }).length;
+}
+
+function getLeaveCount(y,m){
+  const leaves = getLeaves();
+  return leaves.filter(d=>{
     let dt=new Date(d);
     return dt.getFullYear()==y && dt.getMonth()+1==m;
   }).length;
@@ -105,6 +134,100 @@ function validateForm() {
   return true;
 }
 
+// ---------- DEDUCTION DETAILS MODAL ----------
+function showDeductionDetails(year = null, month = null) {
+  let y, m;
+  
+  if (year && month) {
+    // Specific month provided (for quarterly/yearly views)
+    y = year;
+    m = month;
+  } else {
+    // Current month (for dashboard)
+    let now = new Date();
+    y = now.getFullYear();
+    m = now.getMonth() + 1;
+  }
+  
+  let plDays = getLeaveCount(y, m);
+  let holidays = getHolidayCount(y, m);
+  let deduction = (plDays + holidays) * 6;
+  
+  // Get leave dates for the month
+  const leaves = getLeaves().filter(d => {
+    let dt = new Date(d);
+    return dt.getFullYear() == y && dt.getMonth() + 1 == m;
+  });
+  
+  // Get holidays for the month
+  const holidayDates = getHolidays(y).filter(d => {
+    let dt = new Date(d);
+    return dt.getFullYear() == y && dt.getMonth() + 1 == m;
+  });
+  
+  // Create modal content
+  const modal = document.createElement('div');
+  modal.className = 'deduction-modal';
+  modal.innerHTML = `
+    <div class="deduction-modal-content">
+      <div class="deduction-modal-header">
+        <h3>Deduction Breakdown - ${getMonthName(m)} ${y}</h3>
+        <button class="deduction-modal-close" onclick="this.parentElement.parentElement.remove()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="deduction-modal-body">
+        <div class="deduction-section">
+          <h4>Calculation Formula</h4>
+          <div class="deduction-formula">
+            <span>(PL Days + Holidays) × 6 hours = Total Deduction</span>
+          </div>
+          <div class="deduction-calculation">
+            <span>(${plDays} + ${holidays}) × 6 = ${deduction} hours</span>
+          </div>
+        </div>
+        
+        <div class="deduction-section">
+          <h4>PL Days (${plDays} days)</h4>
+          ${leaves.length > 0 ? `
+            <ul class="deduction-list">
+              ${leaves.map(date => `<li>${formatDate(date)}</li>`).join('')}
+            </ul>
+          ` : '<p class="deduction-empty">No PL days this month</p>'}
+        </div>
+        
+        <div class="deduction-section">
+          <h4>Holidays (${holidays} days)</h4>
+          ${holidayDates.length > 0 ? `
+            <ul class="deduction-list">
+              ${holidayDates.map(date => `<li>${formatDate(date)}</li>`).join('')}
+            </ul>
+          ` : '<p class="deduction-empty">No holidays this month</p>'}
+        </div>
+        
+        <div class="deduction-summary">
+          <div class="deduction-summary-row">
+            <span>Total Deduction:</span>
+            <span class="deduction-total">${deduction} hours</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  // Add click outside to close
+  modal.addEventListener('click', function(e) {
+    if (e.target === modal) {
+      modal.remove();
+    }
+  });
+  
+  document.body.appendChild(modal);
+}
+
 // ---------- DASHBOARD ----------
 function refreshDash(){
   let now=new Date();
@@ -116,7 +239,7 @@ function refreshDash(){
 
   let expected = (weeks * 3 * dailyHours).toFixed(1);
 
-  let plDays = +$('pl-days').value || 0;
+  let plDays = getLeaveCount(y,m);
   let holidays = getHolidayCount(y,m);
 
   let deduction = (plDays + holidays) * 6;
@@ -145,6 +268,7 @@ function refreshDash(){
   $('m-shortfall').innerText = shortfall;
 
   $('holidays').value = holidays;
+  $('pl-days-display').value = plDays;
 
   // Update shortfall card styling
   const shortfallCard = $('shortfall-card');
@@ -155,6 +279,9 @@ function refreshDash(){
   }
 
   renderTable();
+  renderLeaveTable();
+  renderHolidayTable();
+  refreshMonthly();
   refreshQuarter();
   refreshYearly();
 }
@@ -178,7 +305,7 @@ function refreshQuarter() {
     const dailyHours = 6;
     const expected = (weeks * 3 * dailyHours).toFixed(1);
     
-    const plDays = +$('pl-days').value || 0;
+    const plDays = getLeaveCount(currentYear, month);
     const holidays = getHolidayCount(currentYear, month);
     const deduction = (plDays + holidays) * 6;
     const netTarget = (expected - deduction).toFixed(1);
@@ -224,6 +351,46 @@ function refreshQuarter() {
   $('q-shortfall').innerText = totalShortfall;
 }
 
+// ---------- MONTHLY VIEW ----------
+function refreshMonthly() {
+  const log = getLog();
+  
+  // Update month label
+  $('month-label').innerText = `${getMonthName(currentMonth)} ${currentYear}`;
+  
+  const workingDays = getWorkingDays(currentYear, currentMonth);
+  const weeks = (workingDays / 5).toFixed(1);
+  const dailyHours = 6;
+  const expected = (weeks * 3 * dailyHours).toFixed(1);
+  
+  const plDays = getLeaveCount(currentYear, currentMonth);
+  const holidays = getHolidayCount(currentYear, currentMonth);
+  const deduction = (plDays + holidays) * 6;
+  const netTarget = (expected - deduction).toFixed(1);
+  
+  const worked = log
+    .filter(r => r.date.startsWith(`${currentYear}-${pad(currentMonth)}`))
+    .reduce((s, r) => s + r.hours, 0)
+    .toFixed(1);
+  
+  const shortfall = (netTarget - worked).toFixed(1);
+  
+  // Update monthly summary
+  $('m-wdays').innerText = workingDays;
+  $('m-expected').innerText = expected;
+  $('m-worked').innerText = worked;
+  $('m-shortfall').innerText = shortfall;
+  $('m-deduction').innerText = deduction + ` (PL:${plDays}, H:${holidays})`;
+  
+  // Update shortfall card styling
+  const shortfallCard = $('m-shortfall-card');
+  if (parseFloat(shortfall) > 0) {
+    shortfallCard.style.borderColor = 'var(--danger)';
+  } else {
+    shortfallCard.style.borderColor = 'var(--success)';
+  }
+}
+
 // ---------- YEARLY VIEW ----------
 function refreshYearly() {
   const log = getLog();
@@ -247,7 +414,7 @@ function refreshYearly() {
       const dailyHours = 6;
       const expected = (weeks * 3 * dailyHours).toFixed(1);
       
-      const plDays = +$('pl-days').value || 0;
+      const plDays = getLeaveCount(currentYear, month);
       const holidays = getHolidayCount(currentYear, month);
       const deduction = (plDays + holidays) * 6;
       
@@ -385,6 +552,106 @@ function renderTable(){
   `).join('');
 }
 
+// ---------- LEAVE TABLE ----------
+function renderLeaveTable(){
+  let leaves = getLeaves();
+  const leaveBody = $('leave-body');
+  const emptyLeaveState = $('empty-leave-state');
+  const leaveCount = $('leave-count');
+  
+  // Update leave count
+  leaveCount.textContent = `${leaves.length} ${leaves.length === 1 ? 'day' : 'days'}`;
+  
+  if (leaves.length === 0) {
+    leaveBody.innerHTML = '';
+    emptyLeaveState.classList.add('show');
+    return;
+  }
+  
+  emptyLeaveState.classList.remove('show');
+  
+  // Sort by date descending
+  leaves.sort((a, b) => new Date(b) - new Date(a));
+  
+  leaveBody.innerHTML = leaves.map((date, index) => `
+    <tr style="animation: fadeIn 0.3s ease-out; animation-delay: ${index * 0.05}s; animation-fill-mode: both;">
+      <td>
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <svg style="width: 16px; height: 16px; color: var(--text-muted);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="16" y1="2" x2="16" y2="6"></line>
+            <line x1="8" y1="2" x2="8" y2="6"></line>
+          </svg>
+          ${formatDate(date)}
+        </div>
+      </td>
+      <td>
+        <span class="leave-type">PL</span>
+      </td>
+      <td>
+        <button class="btn-delete" onclick="deleteLeave('${date}')" title="Delete leave">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            <line x1="10" y1="11" x2="10" y2="17"></line>
+            <line x1="14" y1="11" x2="14" y2="17"></line>
+          </svg>
+        </button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+// ---------- HOLIDAY TABLE ----------
+function renderHolidayTable(){
+  let holidays = getHolidays(currentYear);
+  const holidayBody = $('holiday-body');
+  const emptyHolidayState = $('empty-holiday-state');
+  const holidayCount = $('holiday-count');
+  
+  // Update holiday count
+  holidayCount.textContent = `${holidays.length} ${holidays.length === 1 ? 'day' : 'days'}`;
+  
+  if (holidays.length === 0) {
+    holidayBody.innerHTML = '';
+    emptyHolidayState.classList.add('show');
+    return;
+  }
+  
+  emptyHolidayState.classList.remove('show');
+  
+  // Sort by date ascending
+  holidays.sort((a, b) => new Date(a) - new Date(b));
+  
+  holidayBody.innerHTML = holidays.map((date, index) => `
+    <tr style="animation: fadeIn 0.3s ease-out; animation-delay: ${index * 0.05}s; animation-fill-mode: both;">
+      <td>
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <svg style="width: 16px; height: 16px; color: var(--text-muted);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="16" y1="2" x2="16" y2="6"></line>
+            <line x1="8" y1="2" x2="8" y2="6"></line>
+          </svg>
+          ${formatDate(date)}
+        </div>
+      </td>
+      <td>
+        <span class="holiday-type">Holiday</span>
+      </td>
+      <td>
+        <button class="btn-delete" onclick="deleteHoliday('${date}')" title="Delete holiday">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            <line x1="10" y1="11" x2="10" y2="17"></line>
+            <line x1="14" y1="11" x2="14" y2="17"></line>
+          </svg>
+        </button>
+      </td>
+    </tr>
+  `).join('');
+}
+
 // ---------- FORMAT DATE ----------
 function formatDate(dateString) {
   const date = new Date(dateString);
@@ -403,6 +670,34 @@ function deleteEntry(date) {
   saveLog(log);
   
   showToast('Entry deleted successfully', 'success');
+  refreshDash();
+}
+
+// ---------- DELETE LEAVE ----------
+function deleteLeave(date) {
+  if (!confirm('Are you sure you want to delete this leave?')) {
+    return;
+  }
+  
+  let leaves = getLeaves();
+  leaves = leaves.filter(d => d !== date);
+  saveLeaves(leaves);
+  
+  showToast('Leave deleted successfully', 'success');
+  refreshDash();
+}
+
+// ---------- DELETE HOLIDAY ----------
+function deleteHoliday(date) {
+  if (!confirm('Are you sure you want to delete this holiday?')) {
+    return;
+  }
+  
+  let holidays = getHolidays(currentYear);
+  holidays = holidays.filter(d => d !== date);
+  saveHolidays(currentYear, holidays);
+  
+  showToast('Holiday deleted successfully', 'success');
   refreshDash();
 }
 
@@ -527,6 +822,60 @@ function saveEntry(){
   refreshDash();
 }
 
+// ---------- SAVE LEAVE ----------
+function saveLeave(){
+  const date = $('leave-date').value;
+  
+  if (!date) {
+    showToast('Please select a date', 'error');
+    return;
+  }
+  
+  let leaves = getLeaves();
+  
+  // Check if leave for this date already exists
+  if (leaves.includes(date)) {
+    showToast('Leave for this date already exists', 'error');
+    return;
+  }
+  
+  leaves.push(date);
+  saveLeaves(leaves);
+  
+  // Clear form
+  $('leave-date').value = '';
+  
+  showToast('Leave added successfully!', 'success');
+  refreshDash();
+}
+
+// ---------- SAVE HOLIDAY ----------
+function saveHoliday(){
+  const date = $('holiday-date').value;
+  
+  if (!date) {
+    showToast('Please select a date', 'error');
+    return;
+  }
+  
+  let holidays = getHolidays(currentYear);
+  
+  // Check if holiday for this date already exists
+  if (holidays.includes(date)) {
+    showToast('Holiday for this date already exists', 'error');
+    return;
+  }
+  
+  holidays.push(date);
+  saveHolidays(currentYear, holidays);
+  
+  // Clear form
+  $('holiday-date').value = '';
+  
+  showToast('Holiday added successfully!', 'success');
+  refreshDash();
+}
+
 // ---------- SET DEFAULT DATE ----------
 function setDefaultDate() {
   const today = new Date();
@@ -573,6 +922,23 @@ function navigateQuarter(direction) {
 // ---------- YEAR NAVIGATION ----------
 function navigateYear(direction) {
   currentYear += direction;
+  refreshQuarter();
+  refreshYearly();
+}
+
+// ---------- MONTH NAVIGATION ----------
+function navigateMonth(direction) {
+  currentMonth += direction;
+  
+  if (currentMonth > 12) {
+    currentMonth = 1;
+    currentYear++;
+  } else if (currentMonth < 1) {
+    currentMonth = 12;
+    currentYear--;
+  }
+  
+  refreshMonthly();
   refreshQuarter();
   refreshYearly();
 }
@@ -766,13 +1132,24 @@ document.addEventListener('DOMContentLoaded', function() {
   // Initialize tabs
   initTabs();
   
-  // Add event listeners
-  $('pl-days').addEventListener('input', refreshDash);
+  // Add event listeners (PL days are now calculated automatically from leave entries)
   
   // Form submission
   $('entry-form').addEventListener('submit', function(e) {
     e.preventDefault();
     saveEntry();
+  });
+  
+  // Leave form submission
+  $('leave-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    saveLeave();
+  });
+  
+  // Holiday form submission
+  $('holiday-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    saveHoliday();
   });
   
   // Cancel edit button
@@ -785,6 +1162,10 @@ document.addEventListener('DOMContentLoaded', function() {
   // Year navigation
   $('prev-year').addEventListener('click', () => navigateYear(-1));
   $('next-year').addEventListener('click', () => navigateYear(1));
+  
+  // Month navigation
+  $('prev-month').addEventListener('click', () => navigateMonth(-1));
+  $('next-month').addEventListener('click', () => navigateMonth(1));
   
   // CSV upload
   $('csv-upload').addEventListener('change', handleCSVUpload);
@@ -800,6 +1181,40 @@ document.addEventListener('DOMContentLoaded', function() {
   $('checkout-now').addEventListener('click', function() {
     setCurrentTime('checkout');
   });
+  
+  // Deduction card click handler for Dashboard
+  $('d-pl').addEventListener('click', () => showDeductionDetails());
+  $('d-pl').style.cursor = 'pointer';
+  $('d-pl').title = 'Click to see deduction details';
+  
+  // Deduction card click handler for Quarterly view
+  $('q-deduction').addEventListener('click', () => {
+    // Show deduction for each month in the quarter
+    const months = getQuarterMonths(currentQuarter);
+    months.forEach(month => {
+      showDeductionDetails(currentYear, month);
+    });
+  });
+  $('q-deduction').style.cursor = 'pointer';
+  $('q-deduction').title = 'Click to see deduction details';
+  
+  // Deduction card click handler for Yearly view
+  $('y-deduction').addEventListener('click', () => {
+    // Show deduction for each quarter in the year
+    for (let quarter = 1; quarter <= 4; quarter++) {
+      const months = getQuarterMonths(quarter);
+      months.forEach(month => {
+        showDeductionDetails(currentYear, month);
+      });
+    }
+  });
+  $('y-deduction').style.cursor = 'pointer';
+  $('y-deduction').title = 'Click to see deduction details';
+  
+  // Deduction card click handler for Monthly view
+  $('m-deduction').addEventListener('click', () => showDeductionDetails(currentYear, currentMonth));
+  $('m-deduction').style.cursor = 'pointer';
+  $('m-deduction').title = 'Click to see deduction details';
   
   // Add input animations
   const inputs = document.querySelectorAll('input');
