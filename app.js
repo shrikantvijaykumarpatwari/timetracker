@@ -18,6 +18,58 @@ let displayedLogEntries = 10; // Track how many log entries to display
 const getLog = () => JSON.parse(localStorage.getItem('log') || '[]');
 const saveLog = d => localStorage.setItem('log', JSON.stringify(d));
 
+// ---------- MIGRATION ----------
+function migrateOldData() {
+  const oldData = localStorage.getItem('att_log');
+  if (!oldData) {
+    return; // No old data to migrate
+  }
+  
+  try {
+    const oldEntries = JSON.parse(oldData);
+    if (!Array.isArray(oldEntries) || oldEntries.length === 0) {
+      localStorage.removeItem('att_log');
+      return;
+    }
+    
+    // Get existing log data
+    const currentLog = getLog();
+    
+    // Create a map of existing entries by date for quick lookup
+    const existingDates = new Set(currentLog.map(entry => entry.date));
+    
+    // Merge old entries that don't already exist in current log
+    let migratedCount = 0;
+    oldEntries.forEach(entry => {
+      if (entry.date && !existingDates.has(entry.date)) {
+        currentLog.push({
+          date: entry.date,
+          hours: entry.hours || 0,
+          checkin: entry.checkin || '09:00',
+          checkout: entry.checkout || '18:00'
+        });
+        migratedCount++;
+      }
+    });
+    
+    // Save merged data
+    if (migratedCount > 0) {
+      saveLog(currentLog);
+      console.log(`Migrated ${migratedCount} entries from 'att_log' to 'log'`);
+    }
+    
+    // Remove old data
+    localStorage.removeItem('att_log');
+    
+    if (migratedCount > 0) {
+      showToast(`Migrated ${migratedCount} entries from previous version`, 'success');
+    }
+  } catch (error) {
+    console.error('Error migrating old data:', error);
+    // Don't remove old data if migration failed
+  }
+}
+
 // Leave storage
 const getLeaves = () => JSON.parse(localStorage.getItem('leaves') || '[]');
 const saveLeaves = d => localStorage.setItem('leaves', JSON.stringify(d));
@@ -1152,6 +1204,9 @@ function initTabs() {
 
 // ---------- INIT ----------
 document.addEventListener('DOMContentLoaded', function() {
+  // Migrate old data from 'att_log' to 'log' if needed
+  migrateOldData();
+  
   // Set default date
   setDefaultDate();
   
