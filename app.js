@@ -35,6 +35,13 @@ const getHolidays = (year) => {
 };
 const saveHolidays = (year, holidays) => localStorage.setItem('holidays_' + year, JSON.stringify(holidays));
 
+// Daily hours storage
+const getDailyHours = () => {
+  const stored = localStorage.getItem('dailyHours');
+  return stored ? parseFloat(stored) : 6;
+};
+const saveDailyHours = (hours) => localStorage.setItem('dailyHours', hours);
+
 // ---------- HELPERS ----------
 const pad = n => String(n).padStart(2,'0');
 
@@ -151,6 +158,7 @@ function showDeductionDetails(year = null, month = null) {
   
   let plDays = getLeaveCount(y, m);
   let holidays = getHolidayCount(y, m);
+  let dailyHours = getDailyHours();
   let deduction = (plDays + holidays) * 6;
   
   // Get leave dates for the month
@@ -235,7 +243,7 @@ function refreshDash(){
 
   let workingDays = getWorkingDays(y,m);
   let weeks = (workingDays/5).toFixed(1);
-  let dailyHours = 6;
+  let dailyHours = getDailyHours();
 
   let expected = (weeks * 3 * dailyHours).toFixed(1);
 
@@ -302,7 +310,7 @@ function refreshQuarter() {
     const monthNum = index + 1;
     const workingDays = getWorkingDays(currentYear, month);
     const weeks = (workingDays / 5).toFixed(1);
-    const dailyHours = 6;
+    const dailyHours = getDailyHours();
     const expected = (weeks * 3 * dailyHours).toFixed(1);
     
     const plDays = getLeaveCount(currentYear, month);
@@ -360,7 +368,7 @@ function refreshMonthly() {
   
   const workingDays = getWorkingDays(currentYear, currentMonth);
   const weeks = (workingDays / 5).toFixed(1);
-  const dailyHours = 6;
+  const dailyHours = getDailyHours();
   const expected = (weeks * 3 * dailyHours).toFixed(1);
   
   const plDays = getLeaveCount(currentYear, currentMonth);
@@ -411,7 +419,7 @@ function refreshYearly() {
     months.forEach(month => {
       const workingDays = getWorkingDays(currentYear, month);
       const weeks = (workingDays / 5).toFixed(1);
-      const dailyHours = 6;
+      const dailyHours = getDailyHours();
       const expected = (weeks * 3 * dailyHours).toFixed(1);
       
       const plDays = getLeaveCount(currentYear, month);
@@ -1215,6 +1223,19 @@ document.addEventListener('DOMContentLoaded', function() {
   $('m-deduction').addEventListener('click', () => showDeductionDetails(currentYear, currentMonth));
   $('m-deduction').style.cursor = 'pointer';
   $('m-deduction').title = 'Click to see deduction details';
+  
+  // Daily hours input
+  $('daily-hours').value = getDailyHours();
+  $('save-daily-hours').addEventListener('click', function() {
+    const hours = parseFloat($('daily-hours').value);
+    if (isNaN(hours) || hours < 1 || hours > 24) {
+      showToast('Please enter a valid number between 1 and 24', 'error');
+      return;
+    }
+    saveDailyHours(hours);
+    showToast('Daily hours updated successfully!', 'success');
+    refreshDash();
+  });
   
   // Add input animations
   const inputs = document.querySelectorAll('input');
