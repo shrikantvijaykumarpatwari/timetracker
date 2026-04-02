@@ -12,6 +12,7 @@ let currentYear = new Date().getFullYear();
 let currentQuarter = Math.ceil((new Date().getMonth() + 1) / 3);
 let currentMonth = new Date().getMonth() + 1; // Track current month for monthly view
 let editingDate = null; // Track which date is being edited
+let displayedLogEntries = 10; // Track how many log entries to display
 
 // ---------- STORAGE ----------
 const getLog = () => JSON.parse(localStorage.getItem('log') || '[]');
@@ -240,6 +241,9 @@ function showDeductionDetails(year = null, month = null) {
 function refreshDash(){
   let now=new Date();
   let y=now.getFullYear(), m=now.getMonth()+1;
+  
+  // Reset displayed log entries when refreshing dashboard
+  displayedLogEntries = 10;
 
   let workingDays = getWorkingDays(y,m);
   let weeks = (workingDays/5).toFixed(1);
@@ -477,6 +481,7 @@ function renderTable(){
   const logBody = $('log-body');
   const emptyState = $('empty-state');
   const logCount = $('log-count');
+  const loadMoreContainer = $('load-more-container');
   
   // Update log count
   logCount.textContent = `${log.length} ${log.length === 1 ? 'entry' : 'entries'}`;
@@ -484,6 +489,7 @@ function renderTable(){
   if (log.length === 0) {
     logBody.innerHTML = '';
     emptyState.classList.add('show');
+    if (loadMoreContainer) loadMoreContainer.style.display = 'none';
     return;
   }
   
@@ -492,7 +498,10 @@ function renderTable(){
   // Sort by date descending
   log.sort((a, b) => new Date(b.date) - new Date(a.date));
   
-  logBody.innerHTML = log.map((r, index) => `
+  // Show only the first N entries
+  const displayedLog = log.slice(0, displayedLogEntries);
+  
+  logBody.innerHTML = displayedLog.map((r, index) => `
     <tr style="animation: fadeIn 0.3s ease-out; animation-delay: ${index * 0.05}s; animation-fill-mode: both;">
       <td>
         <div style="display: flex; align-items: center; gap: 0.5rem;">
@@ -558,6 +567,15 @@ function renderTable(){
       </td>
     </tr>
   `).join('');
+  
+  // Show/hide load more button
+  if (loadMoreContainer) {
+    if (log.length > displayedLogEntries) {
+      loadMoreContainer.style.display = 'flex';
+    } else {
+      loadMoreContainer.style.display = 'none';
+    }
+  }
 }
 
 // ---------- LEAVE TABLE ----------
@@ -1180,6 +1198,12 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // CSV download
   $('csv-download').addEventListener('click', downloadCSV);
+  
+  // Load more button
+  $('load-more-btn').addEventListener('click', function() {
+    displayedLogEntries += 10;
+    renderTable();
+  });
   
   // Now buttons for time inputs
   $('checkin-now').addEventListener('click', function() {
