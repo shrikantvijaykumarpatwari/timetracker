@@ -70,8 +70,26 @@ function migrateOldData() {
   }
 }
 
-// Leave storage
-const getLeaves = () => JSON.parse(localStorage.getItem('leaves') || '[]');
+// Leave storage with migration
+const getLeaves = () => {
+  let leaves = JSON.parse(localStorage.getItem('leaves') || '[]');
+
+  // Migrate old string format to new object format
+  let migrated = false;
+  leaves = leaves.map(leave => {
+    if (typeof leave === 'string') {
+      migrated = true;
+      return { date: leave, type: 'full' };
+    }
+    return leave;
+  });
+
+  if (migrated) {
+    saveLeaves(leaves);
+  }
+
+  return leaves;
+};
 const saveLeaves = d => localStorage.setItem('leaves', JSON.stringify(d));
 
 // Holiday storage (per year)
@@ -116,12 +134,24 @@ function getHolidayCount(y,m){
   }).length;
 }
 
-function getLeaveCount(y,m){
+function getLeaveDeduction(y,m){
   const leaves = getLeaves();
-  return leaves.filter(d=>{
-    let dt=new Date(d);
-    return dt.getFullYear()==y && dt.getMonth()+1==m;
-  }).length;
+  return leaves.filter(leave => {
+    let dt = new Date(leave.date);
+    return dt.getFullYear() == y && dt.getMonth() + 1 == m;
+  }).reduce((total, leave) => {
+    return total + (leave.type === 'half' ? 3 : 6);
+  }, 0);
+}
+
+function getLeaveDays(y,m){
+  const leaves = getLeaves();
+  return leaves.filter(leave => {
+    let dt = new Date(leave.date);
+    return dt.getFullYear() == y && dt.getMonth() + 1 == m;
+  }).reduce((total, leave) => {
+    return total + (leave.type === 'half' ? 0.5 : 1);
+  }, 0);
 }
 
 function diff(ci,co){
@@ -209,14 +239,14 @@ function showDeductionDetails(year = null, month = null) {
     m = now.getMonth() + 1;
   }
   
-  let plDays = getLeaveCount(y, m);
+  let leaveDeduction = getLeaveDeduction(y, m);
   let holidays = getHolidayCount(y, m);
   let dailyHours = getDailyHours();
-  let deduction = (plDays + holidays) * 6;
+  let deduction = leaveDeduction + holidays * 6;
   
-  // Get leave dates for the month
-  const leaves = getLeaves().filter(d => {
-    let dt = new Date(d);
+  // Get leave entries for the month
+  const leaves = getLeaves().filter(leave => {
+    let dt = new Date(leave.date);
     return dt.getFullYear() == y && dt.getMonth() + 1 == m;
   });
   
@@ -244,20 +274,20 @@ function showDeductionDetails(year = null, month = null) {
         <div class="deduction-section">
           <h4>Calculation Formula</h4>
           <div class="deduction-formula">
-            <span>(PL Days + Holidays) × 6 hours = Total Deduction</span>
+            <span>Leave Hours + Holidays × 6 hours = Total Deduction</span>
           </div>
           <div class="deduction-calculation">
-            <span>(${plDays} + ${holidays}) × 6 = ${deduction} hours</span>
+            <span>${leaveDeduction} + ${holidays} × 6 = ${deduction} hours</span>
           </div>
         </div>
-        
+
         <div class="deduction-section">
-          <h4>PL Days (${plDays} days)</h4>
+          <h4>Leave (${leaveDeduction} hours)</h4>
           ${leaves.length > 0 ? `
             <ul class="deduction-list">
-              ${leaves.map(date => `<li>${formatDate(date)}</li>`).join('')}
+              ${leaves.map(leave => `<li>${formatDate(leave.date)} - ${leave.type === 'half' ? 'Half Day (3 hours)' : 'Full Day (6 hours)'}</li>`).join('')}
             </ul>
-          ` : '<p class="deduction-empty">No PL days this month</p>'}
+          ` : '<p class="deduction-empty">No leave this month</p>'}
         </div>
         
         <div class="deduction-section">
@@ -303,10 +333,10 @@ function refreshDash(){
 
   let expected = (weeks * 3 * dailyHours).toFixed(1);
 
-  let plDays = getLeaveCount(y,m);
+  let leaveDeduction = getLeaveDeduction(y,m);
   let holidays = getHolidayCount(y,m);
 
-  let deduction = (plDays + holidays) * 6;
+  let deduction = leaveDeduction + holidays * 6;
   let netTarget = (expected - deduction).toFixed(1);
 
   let worked = getLog()
@@ -320,7 +350,7 @@ function refreshDash(){
   $('hdr-month').innerText = now.toLocaleString('default',{month:'long',year:'numeric'});
   $('d-wdays').innerText = workingDays;
   $('d-expected').innerText = expected;
-  $('d-pl').innerText = deduction + ` (PL:${plDays}, H:${holidays})`;
+  $('d-pl').innerText = deduction + ` (Leave:${leaveDeduction}h, H:${holidays})`;
   $('d-net').innerText = netTarget;
   $('d-worked').innerText = worked;
   $('d-short').innerText = shortfall;
@@ -332,7 +362,7 @@ function refreshDash(){
   $('m-shortfall').innerText = shortfall;
 
   $('holidays').value = holidays;
-  $('pl-days-display').value = plDays;
+  $('pl-days-display').value = getLeaveDays(y,m);
 
   // Update shortfall card styling
   const shortfallCard = $('shortfall-card');
@@ -362,16 +392,16 @@ function refreshQuarter() {
   let totalWorked = 0;
   let totalDeduction = 0;
   
-  months.forEach((month, index) => {
-    const monthNum = index + 1;
-    const workingDays = getWorkingDays(currentYear, month);
-    const weeks = (workingDays / 5).toFixed(1);
-    const dailyHours = getDailyHours();
-    const expected = (weeks * 3 * dailyHours).toFixed(1);
-    
-    const plDays = getLeaveCount(currentYear, month);
-    const holidays = getHolidayCount(currentYear, month);
-    const deduction = (plDays + holidays) * 6;
+    months.forEach((month, index) => {
+      const monthNum = index + 1;
+      const workingDays = getWorkingDays(currentYear, month);
+      const weeks = (workingDays / 5).toFixed(1);
+      const dailyHours = getDailyHours();
+      const expected = (weeks * 3 * dailyHours).toFixed(1);
+
+      const leaveDeduction = getLeaveDeduction(currentYear, month);
+      const holidays = getHolidayCount(currentYear, month);
+      const deduction = leaveDeduction + holidays * 6;
     const netTarget = (expected - deduction).toFixed(1);
     
     const worked = log
@@ -426,10 +456,10 @@ function refreshMonthly() {
   const weeks = (workingDays / 5).toFixed(1);
   const dailyHours = getDailyHours();
   const expected = (weeks * 3 * dailyHours).toFixed(1);
-  
-  const plDays = getLeaveCount(currentYear, currentMonth);
+
+  const leaveDeduction = getLeaveDeduction(currentYear, currentMonth);
   const holidays = getHolidayCount(currentYear, currentMonth);
-  const deduction = (plDays + holidays) * 6;
+  const deduction = leaveDeduction + holidays * 6;
   const netTarget = (expected - deduction).toFixed(1);
   
   const worked = log
@@ -444,7 +474,7 @@ function refreshMonthly() {
   $('m-expected').innerText = expected;
   $('m-worked').innerText = worked;
   $('m-shortfall').innerText = shortfall;
-  $('m-deduction').innerText = deduction + ` (PL:${plDays}, H:${holidays})`;
+  $('m-deduction').innerText = deduction + ` (Leave:${leaveDeduction}h, H:${holidays})`;
   
   // Update shortfall card styling
   const shortfallCard = $('m-shortfall-card');
@@ -477,10 +507,10 @@ function refreshYearly() {
       const weeks = (workingDays / 5).toFixed(1);
       const dailyHours = getDailyHours();
       const expected = (weeks * 3 * dailyHours).toFixed(1);
-      
-      const plDays = getLeaveCount(currentYear, month);
+
+      const leaveDeduction = getLeaveDeduction(currentYear, month);
       const holidays = getHolidayCount(currentYear, month);
-      const deduction = (plDays + holidays) * 6;
+      const deduction = leaveDeduction + holidays * 6;
       
       const worked = log
         .filter(r => r.date.startsWith(`${currentYear}-${pad(month)}`))
@@ -637,8 +667,9 @@ function renderLeaveTable(){
   const emptyLeaveState = $('empty-leave-state');
   const leaveCount = $('leave-count');
   
-  // Update leave count
-  leaveCount.textContent = `${leaves.length} ${leaves.length === 1 ? 'day' : 'days'}`;
+  // Update leave count (calculate total days)
+  const totalLeaveDays = leaves.reduce((total, leave) => total + (leave.type === 'half' ? 0.5 : 1), 0);
+  leaveCount.textContent = `${totalLeaveDays} ${totalLeaveDays === 1 ? 'day' : 'days'}`;
   
   if (leaves.length === 0) {
     leaveBody.innerHTML = '';
@@ -649,9 +680,9 @@ function renderLeaveTable(){
   emptyLeaveState.classList.remove('show');
   
   // Sort by date descending
-  leaves.sort((a, b) => new Date(b) - new Date(a));
-  
-  leaveBody.innerHTML = leaves.map((date, index) => `
+  leaves.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  leaveBody.innerHTML = leaves.map((leave, index) => `
     <tr style="animation: fadeIn 0.3s ease-out; animation-delay: ${index * 0.05}s; animation-fill-mode: both;">
       <td>
         <div style="display: flex; align-items: center; gap: 0.5rem;">
@@ -660,14 +691,14 @@ function renderLeaveTable(){
             <line x1="16" y1="2" x2="16" y2="6"></line>
             <line x1="8" y1="2" x2="8" y2="6"></line>
           </svg>
-          ${formatDate(date)}
+          ${formatDate(leave.date)}
         </div>
       </td>
       <td>
-        <span class="leave-type">PL</span>
+        <span class="leave-type">${leave.type === 'half' ? 'Half Day (3h)' : 'Full Day (6h)'}</span>
       </td>
       <td>
-        <button class="btn-delete" onclick="deleteLeave('${date}')" title="Delete leave">
+        <button class="btn-delete" onclick="deleteLeave('${leave.date}')" title="Delete leave">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="3 6 5 6 21 6"></polyline>
             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -756,11 +787,11 @@ function deleteLeave(date) {
   if (!confirm('Are you sure you want to delete this leave?')) {
     return;
   }
-  
+
   let leaves = getLeaves();
-  leaves = leaves.filter(d => d !== date);
+  leaves = leaves.filter(leave => leave.date !== date);
   saveLeaves(leaves);
-  
+
   showToast('Leave deleted successfully', 'success');
   refreshDash();
 }
@@ -903,26 +934,27 @@ function saveEntry(){
 // ---------- SAVE LEAVE ----------
 function saveLeave(){
   const date = $('leave-date').value;
-  
+  const leaveType = document.querySelector('input[name="leave-type"]:checked').value;
+
   if (!date) {
     showToast('Please select a date', 'error');
     return;
   }
-  
+
   let leaves = getLeaves();
-  
+
   // Check if leave for this date already exists
-  if (leaves.includes(date)) {
+  if (leaves.some(leave => leave.date === date)) {
     showToast('Leave for this date already exists', 'error');
     return;
   }
-  
-  leaves.push(date);
+
+  leaves.push({ date, type: leaveType });
   saveLeaves(leaves);
-  
+
   // Clear form
   $('leave-date').value = '';
-  
+
   showToast('Leave added successfully!', 'success');
   refreshDash();
 }
